@@ -26,7 +26,13 @@ def carregar_dados():
             "localmente para gerar o arquivo."
         )
 
-    df = pd.read_csv(CAMINHO_DADOS, sep=";", encoding="utf-8-sig")
+    # "Quantidade de Contribuintes" usa ponto como separador de milhar (241.563 = 241563).
+    # Sem ler como texto, o pandas interpretava como decimal (241,563).
+    # Lida como texto, ela é convertida corretamente depois em _para_float.
+    df = pd.read_csv(
+        CAMINHO_DADOS, sep=";", encoding="utf-8-sig",
+        dtype={"Quantidade de Contribuintes": str},
+    )
     logger.info(f"Dados lidos de {CAMINHO_DADOS}: {df.shape[0]} linhas, {df.shape[1]} colunas")
     return df
 

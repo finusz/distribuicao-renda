@@ -18,3 +18,4 @@ aplicar_tema(pg.title)
 pg.run()
 #python -m streamlit run app.py
 #python -m src.dados.extracaoDados
+#

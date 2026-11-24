@@ -1,10 +1,16 @@
 from src.dados.limpezaDados import dfAgregado
 from src.util.eda import renderizar_eda
 from src.util.tema import cartao
+<<<<<<< HEAD
 from src.util.regressao.testes_estatistica import teste_cenarios
+=======
+from src.util.modelo import treinar_modelos, ALVO, ANO_CORTE
+>>>>>>> 09ee3c8 (tabelas)
 
 import streamlit as st
 import html
+
+import pandas as pd
 
 with cartao("predito_titulo"):
     st.title('Predição da distruibuição de renda', text_alignment="center")
@@ -40,6 +46,7 @@ Todos os modelos testados usaram os últimos 4 anos disponíveis no conjunto de 
 renderizar_eda(dfAgregado, 'dfAgregado')
 
 
+<<<<<<< HEAD
 with cartao("cenarios"):
     st.title("Verificando Cenários")
     st.markdown('''
@@ -60,3 +67,77 @@ o menor erro médio absoluto com {resultado_cenarios.iloc[4, 0]:.2f} [em milhõe
 o estado ou ano.
     ''')
 
+=======
+#------------ MODELO ------------
+
+resultados = treinar_modelos(dfAgregado)
+multipla = resultados["multipla"]
+simples = resultados["simples"]
+
+with cartao("predito_modelo"):
+    st.subheader("Regressão Linear Múltipla")
+    st.markdown(
+        f'''
+O modelo prevê a **{ALVO.replace("$", r"\$")}** de cada estado usando apenas as variáveis do ano anterior.
+
+- **Treino:** anos até {ANO_CORTE} ({multipla["n_treino"]} linhas);
+- **Teste:** anos depois de {ANO_CORTE} ({multipla["n_teste"]} linhas);
+- A divisão é feita por ano (e não aleatória) para que o modelo nunca veja dados "do futuro" durante o treino;
+- Como comparação (baseline), foi treinada uma **regressão linear simples** que usa somente a renda do ano anterior.
+'''
+    )
+
+with cartao("predito_metricas"):
+    st.subheader("Desempenho no conjunto de teste")
+
+    col1, col2, col3 = st.columns(3)
+    mt, ms = multipla["metricas_teste"], simples["metricas_teste"]
+    with col1:
+        st.metric("R²", f"{mt['R²']:.4f}", f"{mt['R²'] - ms['R²']:+.4f} vs. simples")
+    with col2:
+        st.metric("RMSE [R$ milhões]", f"{mt['RMSE']:,.2f}", f"{mt['RMSE'] - ms['RMSE']:+,.2f} vs. simples", delta_color="inverse")
+    with col3:
+        st.metric("MAE [R$ milhões]", f"{mt['MAE']:,.2f}", f"{mt['MAE'] - ms['MAE']:+,.2f} vs. simples", delta_color="inverse")
+
+    tabela_metricas = pd.DataFrame({
+        "Múltipla - treino": multipla["metricas_treino"],
+        "Múltipla - teste": multipla["metricas_teste"],
+        "Simples - treino": simples["metricas_treino"],
+        "Simples - teste": simples["metricas_teste"],
+    })
+    st.dataframe(tabela_metricas, width="stretch")
+
+    erro_medio_pct = multipla["previsoes"]["Erro (%)"].abs().mean()
+    st.markdown(
+        rf'''
+- **R²**: proporção da variação da renda explicada pelo modelo (1 = perfeito);
+- **RMSE**: erro médio em R\$ milhões, penalizando mais os erros grandes;
+- **MAE**: erro absoluto médio em R\$ milhões;
+- Erro percentual absoluto médio no teste: **{erro_medio_pct:.2f}%**.
+
+Obs.: como os estados têm tamanhos muito diferentes (SP é muito maior que RR, por exemplo), o R² tende a ficar alto
+de qualquer forma; o MAE e o erro percentual mostram melhor o quanto o modelo erra em cada estado.
+'''
+    )
+
+with cartao("predito_coeficientes"):
+    st.subheader("Coeficientes do modelo")
+    st.markdown(
+        rf'''
+Cada coeficiente indica quanto a renda prevista muda (em R\$ milhões) quando a variável aumenta 1 unidade,
+mantendo as outras fixas. Intercepto: **{multipla["intercepto"]:,.2f}**.
+
+Obs.: as variáveis do ano anterior são muito correlacionadas entre si (ver mapa de correlação na página "Sobre"),
+então os coeficientes individuais devem ser interpretados com cuidado.
+'''
+    )
+    st.dataframe(multipla["coeficientes"], width="stretch", hide_index=True)
+
+with cartao("predito_tabela"):
+    st.subheader("Previsões por estado (teste)")
+    st.dataframe(
+        multipla["previsoes"].sort_values(["Ano-calendário", "Erro (%)"], key=lambda s: s.abs() if s.name == "Erro (%)" else s),
+        width="stretch",
+        hide_index=True,
+    )
+>>>>>>> 09ee3c8 (tabelas)
