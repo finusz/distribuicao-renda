@@ -7,6 +7,7 @@ from src.util.regressao.testes_estatistica import *
 from src.util.regressao.cenarios import comparar_cenarios
 from src.util.regressao.modelos.regressao_linear_mult import treinar_linear
 from src.util.regressao.modelos.regressao_ridge import treinar_ridge
+from src.util.graficos import real_previsto
 
 import streamlit as st
 
@@ -108,6 +109,14 @@ def exibir_modelo(res: dict, cenario: str, eh_ridge: bool = False):
         ''')
     st.dataframe(res["coeficientes"], width="stretch", hide_index=True)
 
+    st.markdown("##### Real x Previsto (teste)")
+    st.markdown(
+        "Cada ponto é um estado em um ano do teste. A linha tracejada é a previsão perfeita: pontos **acima** dela "
+        "indicam que o modelo previu mais do que aconteceu (superestimou), e pontos **abaixo**, que previu menos "
+        "(subestimou). Os eixos estão em escala logarítmica porque a renda de SP é dezenas de vezes maior que a dos "
+        "estados menores."
+    )
+    st.pyplot(real_previsto(res["previsoes"], ALVO))
 
 with cartao("avaliação_modelos"):
     st.title("Avaliando a escolha do modelo", text_alignment='center')
