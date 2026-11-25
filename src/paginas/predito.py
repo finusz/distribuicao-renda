@@ -1,11 +1,8 @@
 from src.dados.limpezaDados import dfAgregado
 from src.util.eda import renderizar_eda
 from src.util.tema import cartao
-<<<<<<< HEAD
 from src.util.regressao.testes_estatistica import teste_cenarios
-=======
 from src.util.modelo import treinar_modelos, ALVO, ANO_CORTE
->>>>>>> 09ee3c8 (tabelas)
 
 import streamlit as st
 import html
@@ -46,7 +43,6 @@ Todos os modelos testados usaram os últimos 4 anos disponíveis no conjunto de 
 renderizar_eda(dfAgregado, 'dfAgregado')
 
 
-<<<<<<< HEAD
 with cartao("cenarios"):
     st.title("Verificando Cenários")
     st.markdown('''
@@ -67,7 +63,6 @@ o menor erro médio absoluto com {resultado_cenarios.iloc[4, 0]:.2f} [em milhõe
 o estado ou ano.
     ''')
 
-=======
 #------------ MODELO ------------
 
 resultados = treinar_modelos(dfAgregado)
@@ -140,4 +135,3 @@ with cartao("predito_tabela"):
         width="stretch",
         hide_index=True,
     )
->>>>>>> 09ee3c8 (tabelas)
