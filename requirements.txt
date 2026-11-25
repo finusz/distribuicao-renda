@@ -1,18 +1,10 @@
 selenium
-
 pandas
 numpy
 python-bcb
 statsmodels
-
 streamlit
-
 seaborn
 matplotlib
-<<<<<<< HEAD
-
 scikit-learn
 arch
-=======
-scikit-learn
->>>>>>> 09ee3c8 (tabelas)
