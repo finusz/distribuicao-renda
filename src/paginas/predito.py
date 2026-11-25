@@ -118,6 +118,17 @@ def exibir_modelo(res: dict, cenario: str, eh_ridge: bool = False):
     )
     st.pyplot(real_previsto(res["previsoes"], ALVO))
 
+    st.markdown("##### Previsões por estado (teste)")
+    st.dataframe(
+        res["previsoes"].sort_values(
+            ["Ano-calendário", "Erro (%)"],
+            key=lambda s: s.abs() if s.name == "Erro (%)" else s,
+        ),
+        width="stretch",
+        hide_index=True,
+    )
+
+    
 with cartao("avaliação_modelos"):
     st.title("Avaliando a escolha do modelo", text_alignment='center')
     st.markdown("""
