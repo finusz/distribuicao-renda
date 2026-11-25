@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.dados.extracaoDados import extrair_e_salvar
 from src.util.demais_funcoes import configurar_log
 
 #------------ LOGS ------------
@@ -16,7 +15,29 @@ logger = configurar_log('limpeza',
 
 #------------ CARREGAMENTO ------------
 
-dfO = extrair_e_salvar()
+CAMINHO_DADOS = Path(__file__).parent / "distribuicao_renda.csv"
+
+
+def carregar_dados():
+    if not CAMINHO_DADOS.exists():
+        logger.error(f"Arquivo não encontrado: {CAMINHO_DADOS}")
+        raise FileNotFoundError(
+            f"{CAMINHO_DADOS} não existe. Rode 'python -m src.dados.extracaoDados' "
+            "localmente para gerar o arquivo."
+        )
+
+    # "Quantidade de Contribuintes" usa ponto como separador de milhar (241.563 = 241563).
+    # Sem ler como texto, o pandas interpretava como decimal (241,563).
+    # Lida como texto, ela é convertida corretamente depois em _para_float.
+    df = pd.read_csv(
+        CAMINHO_DADOS, sep=";", encoding="utf-8-sig",
+        dtype={"Quantidade de Contribuintes": str},
+    )
+    logger.info(f"Dados lidos de {CAMINHO_DADOS}: {df.shape[0]} linhas, {df.shape[1]} colunas")
+    return df
+
+
+dfO = carregar_dados()
 
 #------------ TRADUÇÃO ------------
 
