@@ -207,17 +207,20 @@ def bar_dados_lista(data: pd.DataFrame, colunas: list[str], coluna_nome: str):
     data_longo = data.melt(
         value_vars=colunas,
         var_name=coluna_nome,
-        value_name="Valor [R$ milhões]",
+        value_name="Valor [R$ trilhões]",
     )
+
+    data_longo["Valor [R$ trilhões]"] = data_longo["Valor [R$ trilhões]"] / 1000000
 
     data_longo[coluna_nome] = (
         data_longo[coluna_nome]
         .str.replace(coluna_nome + " - ", "", regex=False)
         .str.replace(" [R$ milhões]", "", regex=False)
+        .str.replace(" [R$ trilhões]", "", regex=False)
     )
 
     soma_agrupada = (
-        data_longo.groupby(coluna_nome, observed=False)["Valor [R$ milhões]"]
+        data_longo.groupby(coluna_nome, observed=False)["Valor [R$ trilhões]"]
         .sum()
         .dropna()
         .sort_values(ascending=False)
@@ -228,7 +231,7 @@ def bar_dados_lista(data: pd.DataFrame, colunas: list[str], coluna_nome: str):
     top5 = soma_agrupada.head(5)
 
     lista_top5 = "\n".join(
-        f"{i}. **{ente}**: {valor:,.2f}"
+        f"{i}. **{ente}**: R$ {valor:,.2f} tri"
         for i, (ente, valor) in enumerate(top5.items(), start=1)
     )
 
@@ -237,7 +240,7 @@ def bar_dados_lista(data: pd.DataFrame, colunas: list[str], coluna_nome: str):
 
     sns.barplot(
         data=data_longo,
-        x="Valor [R$ milhões]",
+        x="Valor [R$ trilhões]",
         y=coluna_nome,
         order=ordem,
         estimator="sum",
@@ -247,7 +250,7 @@ def bar_dados_lista(data: pd.DataFrame, colunas: list[str], coluna_nome: str):
 
     _pintar_ranking(ax)
     sns.despine(ax=ax)
-    ax.bar_label(ax.containers[0], fontsize=10)
+    ax.bar_label(ax.containers[0], fmt='%.2f',fontsize=12, padding=8)
     ax.tick_params(axis="x", rotation=45, labelsize=9)
     plt.setp(ax.get_xticklabels(), ha="right")
     fig.tight_layout()
