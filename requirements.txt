@@ -8,5 +8,3 @@ seaborn
 matplotlib
 scikit-learn
 arch
-chromium
-chromium-driver
