@@ -1,11 +1,14 @@
 from src.dados.limpezaDados import dfAgregado
+
 from src.util.eda import renderizar_eda
 from src.util.tema import cartao
-from src.util.regressao.testes_estatistica import teste_cenarios
-from src.util.modelo import treinar_modelos, ALVO, ANO_CORTE
+
+from src.util.regressao.testes_estatistica import *
+from src.util.regressao.cenarios import comparar_cenarios
+from src.util.regressao.modelos.regressao_linear_mult import treinar_linear
+from src.util.regressao.modelos.regressao_ridge import treinar_ridge
 
 import streamlit as st
-import html
 
 import pandas as pd
 
@@ -36,102 +39,135 @@ E as características utilizadas para prever serão:
 - Bens e Direitos Totais (ano anterior);
 - Dívidas e Ônus (ano anterior).
 
-Todos os modelos testados usaram os últimos 4 anos disponíveis no conjunto de dados para teste
+Todos os modelos testados usaram um corte de  até 2017 para teste
 '''
     )
 
 renderizar_eda(dfAgregado, 'dfAgregado')
 
+#------------ MODELO ------------
+
+ANO_CORTE = 2017
+
+
+@st.cache_data(show_spinner="Treinando os modelos nos 5 cenários...")
+def rodar_cenarios(ano_corte: int):
+    """Treina Linear e Ridge nos 5 cenários. O cache evita refazer tudo a cada clique no Streamlit."""
+    return (
+        comparar_cenarios(dfAgregado, treinar_linear, ano_corte),
+        comparar_cenarios(dfAgregado, treinar_ridge, ano_corte),
+    )
+
+
+(tab_lin, res_lin), (tab_rid, res_rid) = rodar_cenarios(ANO_CORTE)
+
+melhor_lin = tab_lin.index[0]   # as tabelas já vêm ordenadas pelo MAPE
+melhor_rid = tab_rid.index[0]
+
+
+def exibir_modelo(res: dict, cenario: str, eh_ridge: bool = False):
+    """Desenha o conteúdo de um modelo (métricas, tabela treino/teste, explicações e coeficientes)."""
+    mt = res["metricas_teste"]
+    erro_medio_pct = res["previsoes"]["Erro (%)"].abs().mean()
+
+    st.caption(f"Melhor cenário: **{cenario}**")
+    st.markdown("##### Desempenho no conjunto de teste")
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("R²", f"{mt['R²']:.4f}")
+    with c2:
+        st.metric("RMSE [R$ milhões]", f"{mt['RMSE']:,.2f}")
+    with c3:
+        st.metric("MAE [R$ milhões]", f"{mt['MAE']:,.2f}")
+
+    st.dataframe(
+        pd.DataFrame({"Treino": res["metricas_treino"], "Teste": res["metricas_teste"]}),
+        width="stretch",
+    )
+
+    texto_alpha = f"\n        - **alpha** escolhido (força da penalização): **{res['alpha']}**;" if eh_ridge else ""
+
+    st.markdown(f'''
+        - **R²**: proporção da variação da renda explicada pelo modelo (1 = perfeito);
+        - **RMSE**: erro médio em R\\$ milhões, penalizando mais os erros grandes;
+        - **MAE**: erro absoluto médio em R\\$ milhões;
+        - Erro percentual absoluto médio no teste: **{erro_medio_pct:.2f}%**.{texto_alpha}
+
+        Obs.: como os estados têm tamanhos muito diferentes (SP é muito maior que RR, por exemplo), o R² tende a ficar alto
+        de qualquer forma; o MAE e o erro percentual mostram melhor o quanto o modelo erra em cada estado.
+
+        ##### Coeficientes do modelo
+
+        Os coeficientes estão **padronizados** (as variáveis foram colocadas na mesma escala): cada um indica quanto a renda
+        prevista muda (em R\\$ milhões) quando a variável aumenta 1 desvio padrão, mantendo as outras fixas.
+        Intercepto: **{res["intercepto"]:,.2f}**.
+
+        Obs.: as variáveis do ano anterior são muito correlacionadas entre si (ver mapa de correlação na página "Sobre"),
+        então os coeficientes individuais devem ser interpretados com cuidado.
+        ''')
+    st.dataframe(res["coeficientes"], width="stretch", hide_index=True)
+
+
+with cartao("avaliação_modelos"):
+    st.title("Avaliando a escolha do modelo", text_alignment='center')
+    st.markdown("""
+    Para avaliar corretamente qual modelo deve ser utilizado, separamos dois modelos diferentes para serem considerados, e a escolha vai ser definida pelo qual apresentar
+    melhor rendimento. O teste será feito por ano, não contendo aleatoriedade. Ambos passam pelos mesmos cenários de variáveis,
+    e o que aparece abaixo é o **melhor cenário de cada modelo**.
+    """)
 
 with cartao("cenarios"):
-    st.title("Verificando Cenários")
+    st.subheader("Verificando Cenários", text_alignment='center')
     st.markdown('''
     Primeiro, será testado através do calculo do MAE e MAPE se o ano e o estado fornecem alguma mudança significativa no erro médio absoluto.
-    Para isso foram testados 5 cenários:
+    Para isso foram testados 5 cenários, em cada um dos dois modelos:
     - A. Só o ano anterior da renda;
     - B. Todas as colunas lags;
     - C. B + ano;
     - D. B + estado;
     - E. B + ano + estado.
     ''')
-    resultado_cenarios = teste_cenarios(dfAgregado)
-    st.dataframe(resultado_cenarios)
+
+    t1, t2 = st.columns(2)
+    with t1:
+        st.markdown("##### Regressão Linear Múltipla")
+        st.dataframe(tab_lin, width="stretch")
+    with t2:
+        st.markdown("##### Regressão Ridge")
+        st.dataframe(tab_rid, width="stretch")
+
     st.markdown(f'''
-O cenário que mostrou o menor erro  médio porcentual absoluto foi o cenário E, que considera todas as colunas + ano + estado, 
-com {(resultado_cenarios.iloc[0, 1])*100:.2f}% de erro médio. O cenário mostra que para Regressão Linear Múltipla ele é ideal, porém, olhando apenas para o MAE, o cenário A apresenta
-o menor erro médio absoluto com {resultado_cenarios.iloc[4, 0]:.2f} [em milhões de R$] podendo ser usado Regressão Linear Simples apenas para predizer o rendimento, sem considerar
-o estado ou ano.
+O cenário com menor erro médio percentual absoluto foi **{melhor_lin}** na Regressão Linear Múltipla
+({tab_lin.iloc[0]["MAPE (%)"]:.2f}%) e **{melhor_rid}** na Regressão Ridge ({tab_rid.iloc[0]["MAPE (%)"]:.2f}%).
+Olhando apenas para o MAE, o menor erro absoluto foi **{tab_lin["MAE [R$ milhões]"].idxmin()}** na Linear
+({tab_lin["MAE [R$ milhões]"].min():,.2f} [em milhões de R\\$]) e **{tab_rid["MAE [R$ milhões]"].idxmin()}** no Ridge
+({tab_rid["MAE [R$ milhões]"].min():,.2f} [em milhões de R\\$]).
     ''')
 
-#------------ MODELO ------------
+col_lin, col_rid = st.columns(2)
+with col_lin:
+    with cartao("av_reg_mult"):
+        st.subheader("Regressão Linear Múltipla", text_alignment='center')
+        exibir_modelo(res_lin[melhor_lin], melhor_lin)
 
-resultados = treinar_modelos(dfAgregado)
-multipla = resultados["multipla"]
-simples = resultados["simples"]
+with col_rid:
+    with cartao("av_reg_ridge"):
+        st.subheader("Regressão Ridge", text_alignment='center')
+        exibir_modelo(res_rid[melhor_rid], melhor_rid, eh_ridge=True)
 
-with cartao("predito_modelo"):
-    st.subheader("Regressão Linear Múltipla")
-    st.markdown(
-        f'''
-O modelo prevê a **{ALVO.replace("$", r"\$")}** de cada estado usando apenas as variáveis do ano anterior.
+with cartao("comparacao_final"):
+    st.title("Comparando os melhores de cada modelo")
+    tabela_final = resumo_modelos(dfAgregado, {
+        f"Linear ({melhor_lin})": res_lin[melhor_lin],
+        f"Ridge ({melhor_rid})": res_rid[melhor_rid],
+    }, ANO_CORTE)
+    st.dataframe(tabela_final, width="stretch")
 
-- **Treino:** anos até {ANO_CORTE} ({multipla["n_treino"]} linhas);
-- **Teste:** anos depois de {ANO_CORTE} ({multipla["n_teste"]} linhas);
-- A divisão é feita por ano (e não aleatória) para que o modelo nunca veja dados "do futuro" durante o treino;
-- Como comparação (baseline), foi treinada uma **regressão linear simples** que usa somente a renda do ano anterior.
-'''
-    )
-
-with cartao("predito_metricas"):
-    st.subheader("Desempenho no conjunto de teste")
-
-    col1, col2, col3 = st.columns(3)
-    mt, ms = multipla["metricas_teste"], simples["metricas_teste"]
-    with col1:
-        st.metric("R²", f"{mt['R²']:.4f}", f"{mt['R²'] - ms['R²']:+.4f} vs. simples")
-    with col2:
-        st.metric("RMSE [R$ milhões]", f"{mt['RMSE']:,.2f}", f"{mt['RMSE'] - ms['RMSE']:+,.2f} vs. simples", delta_color="inverse")
-    with col3:
-        st.metric("MAE [R$ milhões]", f"{mt['MAE']:,.2f}", f"{mt['MAE'] - ms['MAE']:+,.2f} vs. simples", delta_color="inverse")
-
-    tabela_metricas = pd.DataFrame({
-        "Múltipla - treino": multipla["metricas_treino"],
-        "Múltipla - teste": multipla["metricas_teste"],
-        "Simples - treino": simples["metricas_treino"],
-        "Simples - teste": simples["metricas_teste"],
-    })
-    st.dataframe(tabela_metricas, width="stretch")
-
-    erro_medio_pct = multipla["previsoes"]["Erro (%)"].abs().mean()
-    st.markdown(
-        rf'''
-- **R²**: proporção da variação da renda explicada pelo modelo (1 = perfeito);
-- **RMSE**: erro médio em R\$ milhões, penalizando mais os erros grandes;
-- **MAE**: erro absoluto médio em R\$ milhões;
-- Erro percentual absoluto médio no teste: **{erro_medio_pct:.2f}%**.
-
-Obs.: como os estados têm tamanhos muito diferentes (SP é muito maior que RR, por exemplo), o R² tende a ficar alto
-de qualquer forma; o MAE e o erro percentual mostram melhor o quanto o modelo erra em cada estado.
-'''
-    )
-
-with cartao("predito_coeficientes"):
-    st.subheader("Coeficientes do modelo")
-    st.markdown(
-        rf'''
-Cada coeficiente indica quanto a renda prevista muda (em R\$ milhões) quando a variável aumenta 1 unidade,
-mantendo as outras fixas. Intercepto: **{multipla["intercepto"]:,.2f}**.
-
-Obs.: as variáveis do ano anterior são muito correlacionadas entre si (ver mapa de correlação na página "Sobre"),
-então os coeficientes individuais devem ser interpretados com cuidado.
-'''
-    )
-    st.dataframe(multipla["coeficientes"], width="stretch", hide_index=True)
-
-with cartao("predito_tabela"):
-    st.subheader("Previsões por estado (teste)")
-    st.dataframe(
-        multipla["previsoes"].sort_values(["Ano-calendário", "Erro (%)"], key=lambda s: s.abs() if s.name == "Erro (%)" else s),
-        width="stretch",
-        hide_index=True,
-    )
+    vencedor = tabela_final.index[0]
+    st.markdown(f'''
+O menor erro percentual médio foi o de **{vencedor}** ({tabela_final.iloc[0]["MAPE (%)"]:.2f}%).
+A linha "Baseline" repete a renda do ano anterior: se um modelo não ficar abaixo dela, ele não se justifica.
+Como o modelo de Regressão Linear apresentou o menor MAE e MAPE, ela acaba sendo escolhida para predizer o anos seguintes,
+e para isso, será treinado utilizando todos os anos existentes dentro do dataset.
+    ''')
