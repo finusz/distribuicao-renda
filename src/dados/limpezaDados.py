@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.dados.extracaoDados import main
+from src.dados.extracaoDados import extrair_e_salvar
 from src.util.demais_funcoes import configurar_log
 
 #------------ LOGS ------------
@@ -16,7 +16,7 @@ logger = configurar_log('limpeza',
 
 #------------ CARREGAMENTO ------------
 
-dfO = main()
+dfO = extrair_e_salvar()
 
 #------------ TRADUÇÃO ------------
 
