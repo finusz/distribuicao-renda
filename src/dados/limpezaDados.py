@@ -128,7 +128,6 @@ COLUNAS_IGNORADAS = [
     "Ano-calendário",
     "Ente Federativo",
     "Centil",
-    "Quantidade de Contribuintes",
     "Nivel",
     "Subcentil"
 ]
