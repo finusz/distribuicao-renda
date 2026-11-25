@@ -139,7 +139,7 @@ def bar_lateral_dados(
     )
 
     lista_top5 = "\n".join(
-    f"{i}. **{ente}**: {valor:,.2f}"
+    f"{i}. **{ente}**: R$ {valor:,.2f}"
     for i, (ente, valor) in enumerate(top5.items(), start=1)
     )
 
