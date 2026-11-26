@@ -40,7 +40,7 @@ E as características utilizadas para prever serão:
 - Bens e Direitos Totais (ano anterior);
 - Dívidas e Ônus (ano anterior).
 
-Todos os modelos testados usaram um corte de  até 2017 para teste
+Todos os modelos testados foram treinados com os anos até 2017 e testados com os anos de 2018 a 2020
 '''
     )
 

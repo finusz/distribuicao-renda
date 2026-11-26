@@ -208,6 +208,11 @@ dfT = (
 )
 logger.info('Exclusão das linhas que tem o ente federativo do brasil da base de dados')
 
+# RO 2007 tem erro na fonte: 34 dos 100 centis vieram sem RB2 e a renda total ficou ~12x menor que a de 2008.
+# Removendo aqui, o RO 2008 também sai do dfAgregado, pois fica sem ano anterior válido (ver ano_anterior_ok).
+dfT = dfT[~((dfT['Ente Federativo'] == 'RO') & (dfT['Ano-calendário'] == 2007))]
+logger.info('Exclusão das linhas de RO 2007 (erro na fonte dos dados)')
+
 #------------ DATASET AGRAGADO ------------
 #Por causa do grande volume de dados distribuidos entre os centis, esse dataset agrupa o ano e ente federativo dos itens
 

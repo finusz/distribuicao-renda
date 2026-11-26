@@ -113,6 +113,7 @@ Para melhor compreensão e facilidade nas analises que serão realizadas, alguma
 - Filtrando o nível por 0;
 - Retirando os atributos "Centil", "Subcentil" e "Nivel";
 - Retirada as características que o ente federativo era referente ao "BRASIL";
+- Retiradas as linhas de RO (Rondônia) em 2007, por erro na fonte dos dados (34 dos 100 centis vieram sem rendimento e a renda total ficou cerca de 12 vezes menor que a de 2008);
         ''')
 
     renderizar_eda(dfT, prefixo='dfT')
