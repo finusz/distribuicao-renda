@@ -104,8 +104,12 @@ def renderizar_eda(data:pd.DataFrame, prefixo: str):
     with cartao(f"{prefixo}_descricao"):
         st.subheader('Descrição do conjunto de dados')
         colunas_irrelevantes = ['Ano-calendário', 'Centil', 'Subcentil', 'Nivel', 'Ente Federativo'] #Colunas que não são relevantes para o describe
-        st.dataframe(
-        data.drop(columns=colunas_irrelevantes, errors="ignore").describe(include="all"))
+        descricao = data.drop(columns=colunas_irrelevantes, errors="ignore").describe(include="all")
+        # colunas de texto no describe misturam números (count, unique) e texto (top),
+        # o que o Streamlit (pyarrow) não consegue exibir; elas são convertidas para texto
+        for col in descricao.columns[descricao.dtypes == object]:
+            descricao[col] = descricao[col].map(lambda v: None if pd.isna(v) else str(v))
+        st.dataframe(descricao)
 
     with cartao(f"{prefixo}_exibicao"):
         st.subheader("Exibição do conjunto de dados")

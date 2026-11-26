@@ -256,3 +256,38 @@ def bar_dados_lista(data: pd.DataFrame, colunas: list[str], coluna_nome: str):
     fig.tight_layout()
 
     return fig, lista_top5
+#grafico realxprevisto
+def real_previsto(previsoes: pd.DataFrame, coluna_real: str, coluna_previsto: str = "Previsto [R$ milhões]",
+                  coluna_ano: str = "Ano-calendário"):
+    '''
+    Gráfico de dispersão Real x Previsto (conjunto de teste).
+    Cada ponto é um estado em um ano; a linha tracejada é a previsão perfeita (y = x).
+    Escala logarítmica nos dois eixos para que estados pequenos e SP fiquem visíveis.
+    '''
+    cores = [COR_AZUL, COR_VERDE, COR_VERMELHO, COR_AMARELO, COR_VERDE_ESCURO]
+
+    fig, ax = plt.subplots(figsize=(9, 7))
+
+    for i, (ano, grupo) in enumerate(previsoes.groupby(coluna_ano)):
+        ax.scatter(grupo[coluna_real], grupo[coluna_previsto], s=45, alpha=0.8,
+                   color=cores[i % len(cores)], edgecolor="white", linewidth=0.6, label=str(ano))
+
+    minimo = min(previsoes[coluna_real].min(), previsoes[coluna_previsto].min()) * 0.8
+    maximo = max(previsoes[coluna_real].max(), previsoes[coluna_previsto].max()) * 1.2
+    ax.plot([minimo, maximo], [minimo, maximo], linestyle="--", color="gray", linewidth=1.2,
+            label="Previsão perfeita")
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(minimo, maximo)
+    ax.set_ylim(minimo, maximo)
+    ax.set_aspect("equal")
+
+    ax.set_xlabel(f"Real - {coluna_real} (escala log)")
+    ax.set_ylabel(f"Previsto - {coluna_previsto} (escala log)")
+    ax.set_title("Real x Previsto (teste)")
+    ax.grid(True, which="major", linestyle=":", alpha=0.5)
+    ax.legend(title="Ano")
+
+    fig.tight_layout()
+    return fig

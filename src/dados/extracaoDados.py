@@ -124,8 +124,10 @@ def baixar_csv(driver, url_download):
         logger.error(f"Erro ao capturar dados. Status: {resposta.status_code}")
         return None
 
-    df = pd.read_csv(io.BytesIO(resposta.content), sep=";", encoding="utf-8-sig",
-                     thousands=".", decimal=",")
+    # Lê tudo como texto: a conversão para número é feita em limpezaDados (_para_float).
+    # Não usar thousands=".": o Centil tem subdivisões como "100.1" e "100.10.1",
+    # que seriam lidas como 1001 e 1001010, e as subdivisões passariam a contar como centis normais.
+    df = pd.read_csv(io.BytesIO(resposta.content), sep=";", encoding="utf-8-sig", dtype=str)
     logger.info(f"Dados carregados: {df.shape[0]} linhas, {df.shape[1]} colunas")
     logger.info("\n" + df.head().to_string())
     return df
