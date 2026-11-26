@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
+from scipy.stats import trim_mean
 
 from src.util.demais_funcoes import configurar_log
 
@@ -197,7 +199,7 @@ grupos_compactados = {
 dfT = dfO[colunas_unicas].copy()
 
 for nome_coluna, colunas in grupos_compactados.items():
-    dfT[nome_coluna] = dfO[colunas].sum(axis=1)
+    dfT[nome_coluna] = dfO[colunas].sum(axis=1, min_count=1)
 
 logger.info('Dataset compactado/transformado')
 logger.info(dfT.head())
@@ -208,10 +210,38 @@ dfT = (
 )
 logger.info('Exclusão das linhas que tem o ente federativo do brasil da base de dados')
 
-# RO 2007 tem erro na fonte: 34 dos 100 centis vieram sem RB2 e a renda total ficou ~12x menor que a de 2008.
-# Removendo aqui, o RO 2008 também sai do dfAgregado, pois fica sem ano anterior válido (ver ano_anterior_ok).
-dfT = dfT[~((dfT['Ente Federativo'] == 'RO') & (dfT['Ano-calendário'] == 2007))]
-logger.info('Exclusão das linhas de RO 2007 (erro na fonte dos dados)')
+#------------ TRATAMENTO DE NULOS ------------
+
+PROPORCAO_CORTE = 0.10  # remove 10% dos menores e 10% dos maiores valores
+
+
+def media_aparada(serie, corte=PROPORCAO_CORTE):
+    """Média aparada dos valores não nulos de um grupo."""
+    validos = serie.dropna().to_numpy(dtype=float)
+    if validos.size == 0:
+        return np.nan
+    return trim_mean(validos, proportiontocut=corte)
+
+
+def preencher_com_media_aparada(data, grupos=("Ano-calendário", "Ente Federativo")):
+    """Preenche os nulos com a média aparada do mesmo ano e ente federativo."""
+    data = data.copy()
+    ignoradas = [*grupos, "Centil"]
+    colunas = [c for c in data.select_dtypes("number").columns if c not in ignoradas]
+
+    medias = data.groupby(list(grupos))[colunas].transform(media_aparada)
+
+    for coluna in colunas:
+        qtd = data[coluna].isna().sum()
+        if qtd:
+            data[coluna] = data[coluna].fillna(medias[coluna])
+            restantes = data[coluna].isna().sum()
+            logger.info(f"coluna '{coluna}': {qtd - restantes} nulos preenchidos, {restantes} restantes")
+
+    return data
+
+
+dfT = preencher_com_media_aparada(dfT)
 
 #------------ DATASET AGRAGADO ------------
 #Por causa do grande volume de dados distribuidos entre os centis, esse dataset agrupa o ano e ente federativo dos itens
