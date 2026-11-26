@@ -21,7 +21,7 @@ with cartao("sobre_titulo"):
     st.title("Distribuição de renda de cada estado", text_alignment="center")
     st.markdown(
         """O trabalho tem como objetivo analisar a distribuição de renda de cada estado,
-        e predizer em R$ a quantidade de rendimento total que um estado terá em um determinado ano.""",
+        e predizer em R$ a quantidade de rendimento total que um estado terá no próximo ano.""",
         text_alignment="center",
     )
 
