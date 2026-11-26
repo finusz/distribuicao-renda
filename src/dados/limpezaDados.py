@@ -287,6 +287,18 @@ for coluna in COLUNAS_LAG:
     colunas_lag_criadas.append(nome_lag)
     logger.info(f"Criada a coluna '{nome_lag}'")
 
+ultimo_ano = dfAgregado["Ano-calendário"].max()
+
+dfFuturo = dfAgregado.loc[
+    dfAgregado["Ano-calendário"] == ultimo_ano, ["Ente Federativo"] + COLUNAS_LAG
+].copy()
+dfFuturo = dfFuturo.rename(
+    columns={c: c.replace(" [R$ milhões]", "") + " (ano anterior)" for c in COLUNAS_LAG}
+)
+dfFuturo["Ano-calendário"] = ultimo_ano + 1
+dfFuturo = dfFuturo.reset_index(drop=True)
+logger.info(f"dfFuturo criado com os valores de {ultimo_ano} para prever {ultimo_ano + 1}")
+
 dfAgregado = dfAgregado.drop(columns=[c for c in COLUNAS_LAG if c != ALVO])
 dfAgregado = dfAgregado.dropna(subset=colunas_lag_criadas)
 logger.info("Removidas as variáveis do mesmo ano e as linhas sem ano anterior")
