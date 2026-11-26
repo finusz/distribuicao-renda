@@ -9,3 +9,4 @@ matplotlib
 scikit-learn
 arch
 odfpy
+scipy
