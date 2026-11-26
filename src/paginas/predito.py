@@ -1,13 +1,17 @@
-from src.dados.limpezaDados import dfAgregado
-
-from src.util.eda import renderizar_eda
-from src.util.tema import cartao
-
+from src.dados.limpezaDados import dfAgregado, dfFuturo
+from src.util.regressao.cenarios import comparar_cenarios, prever_proximo_ano, CENARIOS
+from src.util.graficos import real_previsto, grafico_previsao
 from src.util.regressao.testes_estatistica import *
 from src.util.regressao.cenarios import comparar_cenarios
 from src.util.regressao.modelos.regressao_linear_mult import treinar_linear
 from src.util.regressao.modelos.regressao_ridge import treinar_ridge
 from src.util.graficos import real_previsto
+
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+
+from src.util.eda import renderizar_eda
+from src.util.tema import cartao
 
 import streamlit as st
 
@@ -15,6 +19,11 @@ import pandas as pd
 
 with cartao("predito_titulo"):
     st.title('Predição da distruibuição de renda', text_alignment="center")
+    st.markdown(
+            """Como dito na página inicial, a predição ocorrerá apenas para o próximo ano, e isso ocorre devido a como o modelo foi treinado,
+            considerando os dados do ano anterior para prever a renda total do ano seguinte .""",
+            text_alignment="center",
+        )
 
 with cartao("predito_preparo"):
     st.markdown(
@@ -191,3 +200,46 @@ A linha "Baseline" repete a renda do ano anterior: se um modelo não ficar abaix
 Como o modelo de Regressão Linear apresentou o menor MAE e MAPE, ela acaba sendo escolhida para predizer o anos seguintes,
 e para isso, será treinado utilizando todos os anos existentes dentro do dataset.
     ''')
+
+with cartao("valor_futuro"):
+    st.title("Previsão de anos seguintes", text_alignment='center')
+
+@st.cache_data(show_spinner="Treinando o modelo final...")
+def previsoes_proximo_ano(cenario: str):
+    """Treina a Linear no cenário vencedor com todos os anos e prevê o ano seguinte para os 27 estados."""
+    return prever_proximo_ano(dfAgregado, dfFuturo, LinearRegression(), **CENARIOS[cenario])
+
+
+prev_futuro = previsoes_proximo_ano(melhor_lin)
+ano_prev = int(dfFuturo["Ano-calendário"].iloc[0])
+erro_teste = tab_lin.iloc[0]["MAPE (%)"]
+estados = sorted(dfAgregado["Ente Federativo"].unique())
+
+with cartao("valor_previsto"):
+    st.title(f"Previsão de {ano_prev}", text_alignment="center")
+    st.markdown(
+        f"O modelo escolhido ({melhor_lin}, Regressão Linear) foi treinado com todos os anos do conjunto. "
+        f"Como ele usa os valores do ano anterior, só consegue prever {ano_prev}, a partir dos dados de {ano_prev - 1}."
+    )
+
+param, graf = st.columns([1, 2])
+
+with param:
+    with cartao("escolhas"):
+        st.markdown("#### Selecione um estado")
+        opcao_est = st.selectbox("Estado", estados, key="sel_estado_previsao",
+                                 label_visibility="collapsed")
+
+        historico = dfAgregado[dfAgregado["Ente Federativo"] == opcao_est]
+        previsto = prev_futuro.loc[
+            prev_futuro["Ente Federativo"] == opcao_est, "Previsto [R$ milhões]"
+        ].iloc[0]
+        ultimo_real = historico.sort_values("Ano-calendário")["Renda Total [R$ milhões]"].iloc[-1]
+
+        st.metric(f"Renda prevista para {ano_prev} [R$ milhões]", f"{previsto:,.2f}")
+
+with graf:
+    with cartao("grafico_previsao"):
+        fig_prev = grafico_previsao(historico, ano_prev, previsto, opcao_est, faixa_pct=erro_teste)
+        st.pyplot(fig_prev)
+        plt.close(fig_prev)
