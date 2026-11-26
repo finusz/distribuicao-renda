@@ -291,3 +291,41 @@ def real_previsto(previsoes: pd.DataFrame, coluna_real: str, coluna_previsto: st
 
     fig.tight_layout()
     return fig
+
+def grafico_previsao(historico: pd.DataFrame, ano_prev: int, valor_prev: float,
+                     estado: str, faixa_pct: float | None = None,
+                     alvo: str = "Renda Total [R$ milhões]"):
+    """Linha com a renda real do estado + ponto da previsão do ano seguinte.
+
+    faixa_pct -> erro percentual médio do teste; se informado, desenha uma barra de erro.
+    """
+    historico = historico.sort_values("Ano-calendário")
+    anos = historico["Ano-calendário"].astype(int)
+    real = historico[alvo]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(anos, real, marker="o", color=COR_AZUL, label="Real")
+
+    ax.plot([anos.iloc[-1], ano_prev], [real.iloc[-1], valor_prev],
+            linestyle="--", color=COR_VERMELHO)
+    ax.scatter([ano_prev], [valor_prev], color=COR_VERMELHO, s=80, zorder=3,
+               label=f"Previsto {ano_prev}")
+
+    if faixa_pct:
+        ax.errorbar([ano_prev], [valor_prev], yerr=valor_prev * faixa_pct / 100,
+                    fmt="none", ecolor=COR_VERMELHO, capsize=6,
+                    label=f"± erro médio do teste ({faixa_pct:.1f}%)")
+
+    ax.annotate(f"R$ {valor_prev:,.0f} mi", (ano_prev, valor_prev),
+                textcoords="offset points", xytext=(-10, 10), ha="right")
+
+    ax.set_title(f"{estado}: renda total real e prevista")
+    ax.set_xlabel("Ano-calendário")
+    ax.set_ylabel("Renda Total [R$ milhões]")
+    ax.set_xticks(list(anos) + [ano_prev])
+    ax.tick_params(axis="x", rotation=45)
+    ax.grid(axis="y", alpha=0.3)
+    ax.legend()
+    sns.despine(ax=ax)
+    fig.tight_layout()
+    return fig
