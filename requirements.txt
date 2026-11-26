@@ -8,6 +8,5 @@ seaborn
 matplotlib
 scikit-learn
 arch
-odfpy
 scipy
 requests

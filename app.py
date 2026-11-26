@@ -10,10 +10,9 @@ st.set_page_config(layout="wide", page_icon=str(ICONE_PAGINA))
 
 sobre_page = st.Page("src/paginas/sobre.py", title="Sobre")
 predito_page = st.Page("src/paginas/predito.py", title="Predito")
-arrecadacao_page = st.Page("src/paginas/arrecadacao.py", title="Arrecadação 2021")
 colaboradores_page = st.Page("src/paginas/colaboradores.py", title="Colaboradores")
 
-pg = st.navigation([sobre_page, predito_page, arrecadacao_page, colaboradores_page])
+pg = st.navigation([sobre_page, predito_page, colaboradores_page])
 
 aplicar_tema(pg.title)
 
