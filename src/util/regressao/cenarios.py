@@ -114,3 +114,22 @@ def comparar_cenarios(data: pd.DataFrame, treinar_fn, ANO_CORTE: int = 2017):
 
     tabela = pd.DataFrame(linhas).T.sort_values("MAPE (%)")
     return tabela, resultados
+
+def prever_proximo_ano(data: pd.DataFrame, futuro: pd.DataFrame, regressor,
+                       usar_ano: bool = False, usar_ente: bool = False,
+                       so_lag_renda: bool = False) -> pd.DataFrame:
+    '''
+    Treina o modelo com TODOS os anos disponíveis e prevê o ano seguinte.
+
+    data -> dfAgregado (histórico completo)
+    futuro -> dfFuturo (valores do último ano, já com nomes de "ano anterior")
+    regressor -> LinearRegression() ou Ridge(alpha=...)
+    '''
+    X_tr, numericas, categoricas = montar_features(data, usar_ano, usar_ente, so_lag_renda)
+
+    modelo = criar_pipeline(regressor, numericas, categoricas)
+    modelo.fit(X_tr, data[ALVO])
+
+    saida = futuro[[COL_ENTE, COL_ANO]].copy()
+    saida["Previsto [R$ milhões]"] = modelo.predict(futuro[numericas + categoricas])
+    return saida
