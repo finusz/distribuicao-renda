@@ -145,19 +145,12 @@ def renderizar_criador(nome_exibicao: str, username: str, username_linkedin: str
 #------------ INTERFACE ------------
 st.markdown(CSS_CRIADORES, unsafe_allow_html=True)
 
-with cartao("projeto_titulo"):
-    st.title("Sobre o projeto", text_alignment="center")
+with cartao("projeto_equipe"):
+    st.title("Desenvolvedores", text_alignment="center")
     st.markdown(
-        """Este app foi desenvolvido ao longo da disciplina de Projeto Integrador III,
-        parte da grade do curso de Ciência de Dados da Faculdade de Tecnologia de Cotia (FATEC Cotia).
-        O objetivo é analisar os dados financeiros públicos do grupo Petz Cobasi, publicados na Planilha Interativa do RI,
-        e avaliar se a fusão aumentou o poder de mercado da empresa.""",
+        """Conheça os responsáveis por este projeto""",
         text_alignment="center",
     )
-
-with cartao("projeto_equipe"):
-    st.subheader("Desenvolvedores", text_alignment="center")
-    st.markdown("Conheça os responsáveis por este projeto:", text_alignment="center")
 
 colunas = st.columns(len(CRIADORES), gap="medium")
 for coluna, (nome_exibicao, usernames) in zip(colunas, CRIADORES.items()):
